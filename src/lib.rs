@@ -123,7 +123,12 @@ enum State {
 ///     .wait()
 ///     .expect("failed to wait for subprocess");
 /// ```
+
 pub fn split(s: &str) -> Result<Vec<String>, ParseError> {
+    split_with_delimiters(s, &[])
+}
+
+pub fn split_with_delimiters(s: &str, k: &[char]) -> Result<Vec<String>, ParseError> {
     use State::*;
 
     let mut words = Vec::new();
@@ -171,15 +176,12 @@ pub fn split(s: &str) -> Result<Vec<String>, ParseError> {
                     Delimiter
                 }
                 Some(c) => {
-                    match c {
-                        '|' | '>' | ';' => {
-                            words.push(mem::replace(&mut word, String::new()));
-                            words.push(String::from(c));
-                        }
-                        c => {
-                            word.push(c);
-                        }
-                    }
+                    if k.iter().any(|ch| *ch == c) {
+                        words.push(mem::replace(&mut word, String::new()));
+                        words.push(String::from(c));
+                    } else {
+                        word.push(c);
+                    } 
                     Unquoted
                 }
             },
@@ -383,11 +385,6 @@ mod tests {
     #[test]
     fn split_empty() {
         split_ok(&[("", &[])]);
-    }
-
-    #[test]
-    fn split_redirect() {
-        split_ok(&[("foo -b|bar s", &["foo", "-b", "|", "bar", "s"])]);
     }
 
     #[test]
